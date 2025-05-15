@@ -1,0 +1,1 @@
+pub const PING_METHOD: &str = "ping";

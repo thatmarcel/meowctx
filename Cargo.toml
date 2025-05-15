@@ -1,0 +1,14 @@
+[package]
+name = "meowctx"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies.serde]
+version = "1.0.219"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1.0.140"
+
+[dependencies.anyhow]
+version = "1.0.98"
