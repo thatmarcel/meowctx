@@ -24,10 +24,6 @@ impl McpServerBuilder {
         }
     }
     
-    pub fn start(self) {
-        self.build().start();
-    }
-    
     pub fn add_tool(mut self, tool: McpServerTool) -> Self {
         self.tools.push(tool);
         self

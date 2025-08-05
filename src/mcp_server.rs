@@ -56,6 +56,11 @@ impl McpServer {
         }
     }
 
+    #[cfg(feature = "openapi-server")]
+    pub async fn serve_openapi(&self) {
+        crate::openapi_server::serve_openapi(&self).await;
+    }
+
     fn handle_message(&self, message: &JsonRpcMessage) -> Result<Option<JsonRpcMessage>, anyhow::Error> {
         if message.id.is_none() {
             return Ok(None);
@@ -103,7 +108,7 @@ impl McpServer {
                         Some(fr) => vec![
                             Content::Text(TextContent {
                                 content_type: "text".to_string(),
-                                text: fr
+                                text: serde_json::to_string(&fr)?,
                             })
                         ],
                         None => vec![]

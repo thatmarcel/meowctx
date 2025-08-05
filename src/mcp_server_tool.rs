@@ -3,11 +3,12 @@ use crate::types::mcp::tool_info::{ToolInfo, ToolInputSchema, ToolInputSchemaPro
 use std::collections::HashMap;
 use crate::types::jsonrpc_message::JsonRpcMessageObject;
 
+#[derive(Debug, Clone)]
 pub struct McpServerTool {
     pub name: String,
     pub description: Option<String>,
     pub properties: Vec<McpServerToolPropertyInfo>,
-    pub function: fn(HashMap<String, McpServerToolPropertyValue>) -> Option<String>
+    pub function: fn(HashMap<String, McpServerToolPropertyValue>) -> Option<serde_json::Value>
 }
 
 impl McpServerTool {
