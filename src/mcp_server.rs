@@ -57,8 +57,8 @@ impl McpServer {
     }
 
     #[cfg(feature = "openapi-server")]
-    pub async fn serve_openapi(&self) {
-        crate::openapi_server::serve_openapi(&self).await;
+    pub async fn serve_openapi(&self, bearer_auth_token: Option<String>) {
+        crate::openapi_server::serve_openapi(&self, bearer_auth_token).await;
     }
 
     fn handle_message(&self, message: &JsonRpcMessage) -> Result<Option<JsonRpcMessage>, anyhow::Error> {

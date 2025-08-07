@@ -18,6 +18,15 @@ version = "0.8.4"
 features = ["http2"]
 optional = true
 
+[dependencies.tower-http]
+version = "0.6.6"
+features = ["cors", "auth"]
+default-features = false
+
+[dependencies.tower]
+version = "0.5.2"
+default-features = false
+
 [dependencies.tokio]
 version = "1.47.1"
 optional = true

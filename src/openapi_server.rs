@@ -1,11 +1,14 @@
 use crate::mcp_server::McpServer;
+use crate::mcp_server_tool_property::McpServerToolPropertyValue;
 use crate::openapi_spec_generation::generate_openapi_spec_for_mcp_server;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use std::collections::HashMap;
-use crate::mcp_server_tool_property::McpServerToolPropertyValue;
+use tower::ServiceBuilder;
+use tower_http::cors::CorsLayer;
+use tower_http::validate_request::ValidateRequestHeaderLayer;
 
-pub async fn serve_openapi(mcp_server: &McpServer) {
+pub async fn serve_openapi(mcp_server: &McpServer, bearer_auth_token: Option<String>) {
     let openapi_spec = generate_openapi_spec_for_mcp_server(&mcp_server);
     let openapi_spec_json = Json(openapi_spec.clone());
 
@@ -44,6 +47,15 @@ pub async fn serve_openapi(mcp_server: &McpServer) {
             Json(result.unwrap())
         }));
     }
+
+    app = app.layer(
+        ServiceBuilder::new()
+            .layer(CorsLayer::permissive())
+            .option_layer(match bearer_auth_token {
+                Some(token) => Some(ValidateRequestHeaderLayer::bearer(&token)),
+                None => None
+            })
+    );
 
     let port = std::env::var("PORT").unwrap_or("4000".to_string());
     let addr = format!("0.0.0.0:{}",port);
