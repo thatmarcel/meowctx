@@ -4,11 +4,12 @@ use crate::openapi_spec_generation::generate_openapi_spec_for_mcp_server;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use std::collections::HashMap;
+use serde_json::json;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tower_http::validate_request::ValidateRequestHeaderLayer;
 
-pub async fn serve_openapi(mcp_server: &McpServer, bearer_auth_token: Option<String>) {
+pub async fn serve_openapi(mcp_server: &McpServer, bearer_auth_token: Option<String>) -> Result<(), anyhow::Error> {
     let openapi_spec = generate_openapi_spec_for_mcp_server(&mcp_server);
     let openapi_spec_json = Json(openapi_spec.clone());
 
@@ -22,11 +23,13 @@ pub async fn serve_openapi(mcp_server: &McpServer, bearer_auth_token: Option<Str
             .iter()
             .filter(|t| t.name == path_info.post.operation_id)
             .next()
-            .unwrap()
+            .ok_or(anyhow::anyhow!("OpenAPI spec contains tools that couldn't be found in the list of tools"))?
             .clone();
 
         app = app.route(&path_string.clone(), post(async move |body: Json<serde_json::Value>| {
-            let params = body.as_object().unwrap();
+            let Some(params) = body.as_object() else {
+                return Json(json!("Failed to parse request body as JSON object"))
+            };
 
             let arguments: HashMap<String, McpServerToolPropertyValue> = params.iter().filter_map(|(argument_property_identifier, argument_property_value)| {
                 let value: McpServerToolPropertyValue = match serde_json::to_string(&argument_property_value) {
@@ -42,9 +45,10 @@ pub async fn serve_openapi(mcp_server: &McpServer, bearer_auth_token: Option<Str
                 Some((argument_property_identifier.to_string(), value))
             }).collect();
 
-            let result = (mcp_tool.function)(arguments).await;
-
-            Json(result.unwrap())
+            match (mcp_tool.function)(arguments).await {
+                Ok(result) => Json(result),
+                Err(error) => Json(json!(error.to_string()))
+            }
         }));
     }
 
@@ -60,10 +64,12 @@ pub async fn serve_openapi(mcp_server: &McpServer, bearer_auth_token: Option<Str
     let port = std::env::var("PORT").unwrap_or("4000".to_string());
     let addr = format!("0.0.0.0:{}",port);
 
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     println!("Listening on {}", &addr);
     println!("(=> http://127.0.0.1:{}/openapi.json)", port);
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }

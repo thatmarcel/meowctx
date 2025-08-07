@@ -43,10 +43,20 @@ impl McpServer {
             };
 
             match self.handle_message(&incoming_message).await {
-                Ok(Some(outgoing_message)) => {
-                    std::io::stdout().write_all(
-                        format!("{}\n", serde_json::to_string(&outgoing_message).unwrap()
-                    ).as_bytes()).unwrap();
+                Ok(Some(outgoing_message)) => match serde_json::to_string(&outgoing_message) {
+                    Ok(outgoing_message_json_string) => match std::io::stdout().write_all(
+                        format!("{}\n", outgoing_message_json_string).as_bytes()
+                    ) {
+                        Ok(outgoing_message_json_string_bytes) => outgoing_message_json_string_bytes,
+                        Err(e) => {
+                            eprintln!("{}", e);
+                            continue;
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        continue;
+                    }
                 },
                 Ok(None) => {},
                 Err(e) => {
@@ -57,8 +67,8 @@ impl McpServer {
     }
 
     #[cfg(feature = "openapi-server")]
-    pub async fn serve_openapi(&self, bearer_auth_token: Option<String>) {
-        crate::openapi_server::serve_openapi(&self, bearer_auth_token).await;
+    pub async fn serve_openapi(&self, bearer_auth_token: Option<String>) -> Result<(), anyhow::Error> {
+        crate::openapi_server::serve_openapi(&self, bearer_auth_token).await
     }
 
     async fn handle_message(&self, message: &JsonRpcMessage) -> Result<Option<JsonRpcMessage>, anyhow::Error> {
@@ -104,16 +114,21 @@ impl McpServer {
 
                 let result = CallToolResponseMessageResult {
                     _meta: JsonRpcMessageObject::Null,
-                    content: match function_result.clone() {
-                        Some(fr) => vec![
+                    content: match &function_result {
+                        Ok(fr) => vec![
                             Content::Text(TextContent {
                                 content_type: "text".to_string(),
                                 text: serde_json::to_string(&fr)?,
                             })
                         ],
-                        None => vec![]
+                        Err(e) => vec![
+                            Content::Text(TextContent {
+                                content_type: "text".to_string(),
+                                text: serde_json::to_string(&e.to_string())?,
+                            })
+                        ]
                     },
-                    is_error: Some(function_result.is_none())
+                    is_error: Some(function_result.is_err())
                 };
 
                 let result_object: JsonRpcMessageObject = serde_json::from_str(

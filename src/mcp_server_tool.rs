@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use crate::types::jsonrpc_message::JsonRpcMessageObject;
 
-type BoxedFuture = Pin<Box<dyn Future<Output = Option<serde_json::Value>> + Send + 'static>>;
+type BoxedFuture = Pin<Box<dyn Future<Output = Result<serde_json::Value, anyhow::Error>> + Send + 'static>>;
 
 #[derive(Clone)]
 pub struct McpServerTool {
