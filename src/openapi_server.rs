@@ -42,7 +42,7 @@ pub async fn serve_openapi(mcp_server: &McpServer, bearer_auth_token: Option<Str
                 Some((argument_property_identifier.to_string(), value))
             }).collect();
 
-            let result = (mcp_tool.function)(arguments);
+            let result = (mcp_tool.function)(arguments).await;
 
             Json(result.unwrap())
         }));

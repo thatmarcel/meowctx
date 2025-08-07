@@ -28,7 +28,7 @@ impl McpServer {
         McpServerBuilder::with_name_and_version(name.to_string(), version.to_string())
     }
 
-    pub fn start(&self) {
+    pub async fn start(&self) {
         loop {
             let mut line_content = String::new();
             _ = std::io::stdin().read_line(&mut line_content)
@@ -42,7 +42,7 @@ impl McpServer {
                 }
             };
 
-            match self.handle_message(&incoming_message) {
+            match self.handle_message(&incoming_message).await {
                 Ok(Some(outgoing_message)) => {
                     std::io::stdout().write_all(
                         format!("{}\n", serde_json::to_string(&outgoing_message).unwrap()
@@ -61,20 +61,20 @@ impl McpServer {
         crate::openapi_server::serve_openapi(&self, bearer_auth_token).await;
     }
 
-    fn handle_message(&self, message: &JsonRpcMessage) -> Result<Option<JsonRpcMessage>, anyhow::Error> {
+    async fn handle_message(&self, message: &JsonRpcMessage) -> Result<Option<JsonRpcMessage>, anyhow::Error> {
         if message.id.is_none() {
             return Ok(None);
         }
 
         match &message.method {
             Some(method) => {
-                self.handle_message_with_method(message, method.as_str())
+                self.handle_message_with_method(message, method.as_str()).await
             },
             None => Err(anyhow!("Message without method"))
         }
     }
 
-    fn handle_message_with_method(&self, request_message: &JsonRpcMessage, method: &str) -> Result<Option<JsonRpcMessage>, anyhow::Error> {
+    async fn handle_message_with_method(&self, request_message: &JsonRpcMessage, method: &str) -> Result<Option<JsonRpcMessage>, anyhow::Error> {
         match method {
             CALL_TOOL_METHOD => {
                 let params: CallToolRequestMessageParams = serde_json::from_str(
@@ -100,7 +100,7 @@ impl McpServer {
                     Some((argument_property_identifier.to_string(), value))
                 }).collect();
 
-                let function_result = (tool.function)(arguments);
+                let function_result = (tool.function)(arguments).await;
 
                 let result = CallToolResponseMessageResult {
                     _meta: JsonRpcMessageObject::Null,

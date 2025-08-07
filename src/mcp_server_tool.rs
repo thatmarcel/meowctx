@@ -1,14 +1,18 @@
 use crate::mcp_server_tool_property::{McpServerToolAnyOfPropertyType, McpServerToolArrayPropertyInnerType, McpServerToolPropertyInfo, McpServerToolPropertyType, McpServerToolPropertyValue};
 use crate::types::mcp::tool_info::{ToolInfo, ToolInputSchema, ToolInputSchemaProperty, ToolInputSchemaPropertyItems};
 use std::collections::HashMap;
+use std::pin::Pin;
+use std::sync::Arc;
 use crate::types::jsonrpc_message::JsonRpcMessageObject;
 
-#[derive(Debug, Clone)]
+type BoxedFuture = Pin<Box<dyn Future<Output = Option<serde_json::Value>> + Send + 'static>>;
+
+#[derive(Clone)]
 pub struct McpServerTool {
     pub name: String,
     pub description: Option<String>,
     pub properties: Vec<McpServerToolPropertyInfo>,
-    pub function: fn(HashMap<String, McpServerToolPropertyValue>) -> Option<serde_json::Value>
+    pub function: Arc<dyn Fn(HashMap<String, McpServerToolPropertyValue>) -> BoxedFuture + Send + Sync>
 }
 
 impl McpServerTool {
